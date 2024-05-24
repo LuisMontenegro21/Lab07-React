@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Blog Example</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        .pressed { background-color: lightgrey; }
+        .loading { font-size: 20px; text-align: center; margin-top: 20px; }
+        .empty { font-size: 20px; text-align: center; margin-top: 20px; color: grey; }
+        .post { border: 1px solid #ddd; padding: 15px; margin: 10px; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useEffect, Suspense } = React;
+
+        // Componente para mostrar el estado de carga
+        const Loading = () => <div className="loading">Loading...</div>;
+
+        // Componente para manejar el estado vacío
+        const EmptyState = () => <div className="empty">No posts available</div>;
+
+        // Componente de post
+        const Post = ({ post }) => (
+            <div className="post">
+                <h2>{post.title}</h2>
+                <p>{post.content}</p>
+                {post.image_base64 && <img src={`data:image/jpeg;base64,${post.image_base64}`} alt="Post Image" />}
+            </div>
+        );
+
+        Post.propTypes = {
+            post: PropTypes.shape({
+                title: PropTypes.string.isRequired,
+                content: PropTypes.string.isRequired,
+                image_base64: PropTypes.string
+            }).isRequired
+        };
+
+        // Componente principal de la aplicación
+        const App = () => {
+            const [posts, setPosts] = useState([]);
+            const [loading, setLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                const fetchPosts = async () => {
+                    try {
+                        const response = await fetch('http://localhost:3000/posts');
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        const data = await response.json();
+                        setPosts(data);
+                    } catch (error) {
+                        setError(error);
+                    } finally {
+                        setLoading(false);
+                    }
+                };
+
+                fetchPosts();
+            }, []);
+
+            if (loading) {
+                return <Loading />;
+            }
+
+            if (error) {
+                return <div className="error">{error.message}</div>;
+            }
+
+            if (posts.length === 0) {
+                return <EmptyState />;
+            }
+
+            return (
+                <div>
+                    {posts.map(post => (
+                        <Post key={post.id} post={post} />
+                    ))}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<Suspense fallback={<Loading />}><App /></Suspense>);
+    </script>
+</body>
+</html>
